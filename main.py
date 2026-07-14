@@ -11,6 +11,10 @@ from xhtml2pdf import pisa
 from io import BytesIO
 from typing import Optional
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import StreamingResponse
+from openpyxl import Workbook
+from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+from openpyxl.utils import get_column_letter
 import base64
 import re  # Importante para limpiar letras en versiones antiguas
 
@@ -40,6 +44,7 @@ class UsuarioCreate(BaseModel):
     region_asignada_id: Optional[int] = None
     nombre: Optional[str] = None
     apellido: Optional[str] = None
+    departamento: Optional[str] = None
 
 class PartidaCreate(BaseModel):
     id: Optional[int] = None
@@ -359,6 +364,153 @@ def obtener_usuarios(token: str = Query(...)):
         u["pais_nombre"] = pais_map.get(u.get("pais_asignado_id"), "-")
         
     return {"usuarios": usuarios_res}
+
+@app.get("/admin/usuarios/exportar")
+def exportar_usuarios_excel(token: str = Query(...)):
+    profile = resolver_usuario_por_token(token)
+    # 🔒 EXCLUSIVO ROL 4: Solo el Súper Admin (Rol 4)
+    if profile["rol"] != 4:
+        raise HTTPException(status_code=403, detail="No tienes permisos de Súper Administrador")
+        
+    usuarios_res = supabase.table("usuarios").select("*").order("email").execute().data or []
+    regiones = supabase.table("regiones").select("id, nombre").execute().data or []
+    paises = supabase.table("paises").select("id, nombre").execute().data or []
+    
+    region_map = {r["id"]: r["nombre"] for r in regiones}
+    pais_map = {p["id"]: p["nombre"] for p in paises}
+    
+    roles_nombres = {
+        1: "Nivel 1: Visualizador Regional",
+        2: "Nivel 2: Visualizador General",
+        3: "Nivel 3: Gerente de Nuevos Proyectos",
+        4: "Nivel 4: Súper Administrador",
+        5: "Nivel 5: Gerente de O&M"
+    }
+
+    # Crear libro de trabajo openpyxl
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Usuarios Registrados"
+    
+    # Habilitar líneas de cuadrícula visibles
+    ws.views.sheetView[0].showGridLines = True
+    
+    # Estilos corporativos
+    font_titulo = Font(name="Calibri", size=14, bold=True, color="FFFFFF")
+    font_meta = Font(name="Calibri", size=10, bold=True, color="374151")
+    font_meta_val = Font(name="Calibri", size=10, color="1F2937")
+    font_headers = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
+    font_data = Font(name="Calibri", size=10, color="1F2937")
+    
+    fill_titulo = PatternFill(start_color="1E1B4B", end_color="1E1B4B", fill_type="solid")
+    fill_headers = PatternFill(start_color="4F46E5", end_color="4F46E5", fill_type="solid")
+    fill_alt = PatternFill(start_color="F9FAFB", end_color="F9FAFB", fill_type="solid")
+    
+    align_center = Alignment(horizontal="center", vertical="center")
+    align_left = Alignment(horizontal="left", vertical="center")
+    
+    thin_border = Border(
+        left=Side(style='thin', color='D1D5DB'),
+        right=Side(style='thin', color='D1D5DB'),
+        top=Side(style='thin', color='D1D5DB'),
+        bottom=Side(style='thin', color='D1D5DB')
+    )
+    
+    # 1. Título merged A1:F2
+    ws.merge_cells("A1:F2")
+    cell_titulo = ws["A1"]
+    cell_titulo.value = "FIBEX TELECOM - REPORTE DE USUARIOS REGISTRADOS"
+    cell_titulo.font = font_titulo
+    cell_titulo.fill = fill_titulo
+    cell_titulo.alignment = align_center
+    
+    # Rellenar las celdas unidas para evitar bordes blancos
+    for r in range(1, 3):
+        for c in range(1, 7):
+            ws.cell(row=r, column=c).fill = fill_titulo
+            
+    # 2. Bloque de Metadatos
+    fecha_hoy = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+    
+    ws["A4"] = "Fecha de Emisión:"
+    ws["A4"].font = font_meta
+    ws["B4"] = fecha_hoy
+    ws["B4"].font = font_meta_val
+    
+    ws["A5"] = "Generado por:"
+    ws["A5"].font = font_meta
+    ws["B5"] = profile["email"]
+    ws["B5"].font = font_meta_val
+    
+    # 3. Cabeceras de la tabla (Fila 7)
+    headers = ["Nombre", "Apellido", "Departamento", "Correo Electrónico", "Rol de Usuario", "Ubicación Asignada"]
+    for col_idx, text in enumerate(headers, start=1):
+        cell = ws.cell(row=7, column=col_idx, value=text)
+        cell.font = font_headers
+        cell.fill = fill_headers
+        cell.alignment = align_center
+        cell.border = thin_border
+        
+    # 4. Filas de datos
+    for row_idx, u in enumerate(usuarios_res, start=8):
+        rol_id = u.get("rol", 0)
+        
+        # Determinar ubicación
+        if rol_id == 1:
+            ubicacion_str = region_map.get(u.get("region_asignada_id"), "-")
+        else:
+            ubicacion_str = "No aplica"
+            
+        rol_str = roles_nombres.get(rol_id, f"Rol {rol_id}")
+        
+        row_values = [
+            u.get("nombre") or "-",
+            u.get("apellido") or "-",
+            u.get("departamento") or "-",
+            u.get("email") or "-",
+            rol_str,
+            ubicacion_str
+        ]
+        
+        is_even = (row_idx % 2 == 0)
+        
+        for col_idx, val in enumerate(row_values, start=1):
+            cell = ws.cell(row=row_idx, column=col_idx, value=val)
+            cell.font = font_data
+            cell.border = thin_border
+            
+            # Alineación
+            if col_idx in [5, 6]:
+                cell.alignment = align_center
+            else:
+                cell.alignment = align_left
+                
+            # Cebra
+            if is_even:
+                cell.fill = fill_alt
+
+    # 5. Ancho autoajustable para las columnas
+    for col in ws.columns:
+        max_len = 0
+        col_letter = get_column_letter(col[0].column)
+        for cell in col:
+            if cell.row in [1, 2]:
+                continue
+            if cell.value:
+                max_len = max(max_len, len(str(cell.value)))
+        ws.column_dimensions[col_letter].width = max(max_len + 4, 12)
+        
+    file_stream = BytesIO()
+    wb.save(file_stream)
+    file_stream.seek(0)
+    
+    filename = f"Reporte_Usuarios_Fibex_{datetime.now().strftime('%Y%m%d')}.xlsx"
+    
+    return StreamingResponse(
+        file_stream,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
 
 @app.delete("/admin/usuarios/{usuario_id}")
 def eliminar_usuario(usuario_id: int, token: str = Query(...)):

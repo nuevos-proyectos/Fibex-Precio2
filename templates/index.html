@@ -81,6 +81,7 @@
                     <input type="password" id="admUserPass" placeholder="Contraseña asignada" class="w-full bg-gray-900 border border-gray-700 rounded p-1 text-xs text-white">
                     <input type="text" id="admUserNombre" placeholder="Nombre" class="w-full bg-gray-900 border border-gray-700 rounded p-1 text-xs text-white">
                     <input type="text" id="admUserApellido" placeholder="Apellido" class="w-full bg-gray-900 border border-gray-700 rounded p-1 text-xs text-white">
+                    <input type="text" id="admUserDepartamento" placeholder="Departamento (Ej: Nuevos Proyectos, O&M)" class="w-full bg-gray-900 border border-gray-700 rounded p-1 text-xs text-white">
                     
                     <!-- 🟢 NUEVO SELECT DE ROLES CON LOS VALORES ACTUALIZADOS -->
                     <select id="admUserRol" onchange="toggleUserRegion()" class="w-full bg-gray-900 border border-gray-700 rounded p-1 text-xs text-white">
@@ -199,22 +200,29 @@
             <div id="tabContenidoUsuarios" class="hidden bg-gray-800 border border-gray-700 rounded-xl p-5 space-y-4">
                 <div class="flex justify-between items-center border-b border-gray-700 pb-2">
                     <h3 class="text-md font-bold text-indigo-400 font-mono uppercase tracking-wider">Usuarios Registrados</h3>
-                    <button onclick="cargarUsuariosAdmin()" class="bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded text-xs transition-colors">Sincronizar</button>
+                    <div class="flex space-x-2">
+                        <button onclick="cargarUsuariosAdmin()" class="bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded text-xs transition-colors">Sincronizar</button>
+                        <button onclick="exportarUsuariosExcel()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1 rounded text-xs transition-colors font-semibold flex items-center space-x-1">
+                            <span>📥</span>
+                            <span>Exportar a Excel</span>
+                        </button>
+                    </div>
                 </div>
                 <div class="overflow-y-auto max-h-[65vh] border border-gray-700 rounded">
-                    <table class="w-full text-left text-xs">
+                    <table class="w-full text-left text-xs table-fixed border-collapse">
                         <thead class="bg-gray-900 sticky top-0 text-gray-400 uppercase">
                             <tr>
-                                <th class="p-3">Nombre</th>
-                                <th class="p-3">Apellido</th>
-                                <th class="p-3">Correo</th>
-                                <th class="p-3 text-center">Rol</th>
-                                <th class="p-3 text-center">Ubicación Asignada</th>
-                                <th class="p-3 text-center">Acciones</th>
+                                <th class="p-3 w-[12%]">Nombre</th>
+                                <th class="p-3 w-[12%]">Apellido</th>
+                                <th class="p-3 w-[14%]">Departamento</th>
+                                <th class="p-3 w-[25%]">Correo</th>
+                                <th class="p-3 text-center w-[17%]">Rol</th>
+                                <th class="p-3 text-center w-[11%]">Ubicación</th>
+                                <th class="p-3 text-center w-[9%]">Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="tbodyUsuarios" class="divide-y divide-gray-700 bg-gray-900/30">
-                            <tr><td colspan="6" class="p-4 text-center text-gray-500 italic">Cargando usuarios...</td></tr>
+                            <tr><td colspan="7" class="p-4 text-center text-gray-500 italic">Cargando usuarios...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -247,6 +255,6 @@
         </div>
     </div>
 
-    <script src="/static/script.js?v=7"></script>
+    <script src="/static/script.js?v=9"></script>
 </body>
 </html>

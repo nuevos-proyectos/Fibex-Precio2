@@ -77,17 +77,23 @@ async function precargarAuxiliares() {
         
         if (selA && selB) {
             if (USER_PROFILE && parseInt(USER_PROFILE.rol) === 1) {
-                // Rol 1: Columna A es fija con la región asignada
+                // Rol 1: Columna A puede ser su región asignada o la base nacional de su país
                 const regionAsignada = AUX_DATA.regiones.find(reg => reg.id == USER_PROFILE.region_asignada_id);
+                const nacional = AUX_DATA.regiones.find(reg => reg.es_nacional === true || reg.es_nacional === "true");
+                
+                let htmlA = "";
                 if (regionAsignada) {
-                    selA.innerHTML = `<option value="${regionAsignada.id}">${regionAsignada.nombre}</option>`;
-                    selA.value = regionAsignada.id;
+                    htmlA += `<option value="${regionAsignada.id}">${regionAsignada.nombre}</option>`;
                 }
+                if (nacional && nacional.id != USER_PROFILE.region_asignada_id) {
+                    htmlA += `<option value="${nacional.id}">${nacional.nombre}</option>`;
+                }
+                selA.innerHTML = htmlA;
+                if (regionAsignada) selA.value = regionAsignada.id; // regional por defecto
                 
                 // Columna B: Ninguno o Nacional
                 let htmlB = `<option value="none">-- Ninguno (Ver solo una columna) --</option>`;
-                const nacional = AUX_DATA.regiones.find(reg => (reg.es_nacional === true || reg.es_nacional === "true") && reg.id != USER_PROFILE.region_asignada_id);
-                if (nacional) {
+                if (nacional && nacional.id != USER_PROFILE.region_asignada_id) {
                     htmlB += `<option value="${nacional.id}">${nacional.nombre}</option>`;
                 }
                 selB.innerHTML = htmlB;
@@ -239,8 +245,8 @@ function aplicarPermisosPorRol() {
 
     // LÓGICA POR ROL
     if (rol === 1) {
-        // Visualizador Regional: solo lectura, su ciudad es fija (bloqueada) y puede comparar con el precio nacional
-        if (selectorColA) selectorColA.disabled = true;
+        // Visualizador Regional: solo lectura, puede seleccionar su ciudad o nacional en columna A, y comparar en columna B
+        if (selectorColA) selectorColA.disabled = false;
         if (selectorColB) selectorColB.disabled = false;
         if (selectorRevision) selectorRevision.disabled = true;
         
@@ -548,7 +554,8 @@ async function crearUsuario() {
         rol: rol,
         region_asignada_id: rol === 1 ? parseInt(region) : null,
         nombre: document.getElementById("admUserNombre").value || null,
-        apellido: document.getElementById("admUserApellido").value || null
+        apellido: document.getElementById("admUserApellido").value || null,
+        departamento: document.getElementById("admUserDepartamento").value || null
     };
 
     const r = await fetch(`/admin/usuarios?token=${SESSION_TOKEN}`, {
@@ -563,6 +570,7 @@ async function crearUsuario() {
     document.getElementById("admUserPass").value = "";
     document.getElementById("admUserNombre").value = "";
     document.getElementById("admUserApellido").value = "";
+    document.getElementById("admUserDepartamento").value = "";
     
     // Si la pestaña de usuarios está abierta, sincronizar la lista
     if (!document.getElementById("tabContenidoUsuarios").classList.contains("hidden")) {
@@ -973,7 +981,7 @@ async function cargarUsuariosAdmin() {
     const tbody = document.getElementById("tbodyUsuarios");
     if (!tbody) return;
     
-    tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-amber-500">Cargando usuarios...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-amber-500">Cargando usuarios...</td></tr>';
     
     try {
         const resp = await fetch(`/admin/usuarios?token=${SESSION_TOKEN}`);
@@ -983,7 +991,7 @@ async function cargarUsuariosAdmin() {
         
         tbody.innerHTML = "";
         if (!data.usuarios || data.usuarios.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-gray-500 italic">No hay usuarios registrados.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-gray-500 italic">No hay usuarios registrados.</td></tr>';
             return;
         }
         
@@ -998,13 +1006,14 @@ async function cargarUsuariosAdmin() {
         data.usuarios.forEach(u => {
             const nombreStr = u.nombre || "-";
             const apellidoStr = u.apellido || "-";
+            const deptoStr = u.departamento || "-";
             const emailStr = u.email || "-";
             const rolStr = rolesNombres[u.rol] || `Rol ${u.rol}`;
             
             // Ubicación asignada
-            let ubicacion = "-";
+            let ubicacion = "No aplica";
             if (u.rol === 1) {
-                ubicacion = u.region_nombre || "-";
+                ubicacion = u.region_nombre || "No asignada";
             }
             
             // Si el usuario listado es el propio administrador logueado, ocultar/desactivar botón de eliminar
@@ -1015,19 +1024,20 @@ async function cargarUsuariosAdmin() {
             
             tbody.innerHTML += `
                 <tr class="hover:bg-gray-800 transition-colors">
-                    <td class="p-3 font-semibold text-gray-200">${nombreStr}</td>
-                    <td class="p-3 font-semibold text-gray-200">${apellidoStr}</td>
-                    <td class="p-3 text-gray-300 font-mono">${emailStr}</td>
+                    <td class="p-3 font-semibold text-gray-200 truncate" title="${nombreStr}">${nombreStr}</td>
+                    <td class="p-3 font-semibold text-gray-200 truncate" title="${apellidoStr}">${apellidoStr}</td>
+                    <td class="p-3 text-gray-300 truncate" title="${deptoStr}">${deptoStr}</td>
+                    <td class="p-3 text-gray-300 font-mono truncate" title="${emailStr}">${emailStr}</td>
                     <td class="p-3 text-center">
                         <span class="bg-indigo-900/50 text-indigo-400 border border-indigo-500/30 px-2 py-0.5 rounded text-[10px] font-bold">${rolStr}</span>
                     </td>
-                    <td class="p-3 text-center text-gray-400">${ubicacion}</td>
+                    <td class="p-3 text-center text-gray-400 truncate" title="${ubicacion}">${ubicacion}</td>
                     <td class="p-3 text-center">${btnEliminar}</td>
                 </tr>
             `;
         });
     } catch (error) {
-        tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-500">Error al cargar usuarios: ${error.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-red-500">Error al cargar usuarios: ${error.message}</td></tr>`;
     }
 }
 
@@ -1062,3 +1072,8 @@ document.getElementById("loginEmail")?.addEventListener("keydown", function(e) {
 document.getElementById("loginPass")?.addEventListener("keydown", function(e) {
     if (e.key === "Enter") ejecutarLogin();
 });
+
+function exportarUsuariosExcel() {
+    const url = `/admin/usuarios/exportar?token=${SESSION_TOKEN}`;
+    window.location.href = url;
+}
