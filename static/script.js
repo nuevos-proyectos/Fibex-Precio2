@@ -973,7 +973,7 @@ async function cargarUsuariosAdmin() {
     const tbody = document.getElementById("tbodyUsuarios");
     if (!tbody) return;
     
-    tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-amber-500">Cargando usuarios...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-amber-500">Cargando usuarios...</td></tr>';
     
     try {
         const resp = await fetch(`/admin/usuarios?token=${SESSION_TOKEN}`);
@@ -983,7 +983,7 @@ async function cargarUsuariosAdmin() {
         
         tbody.innerHTML = "";
         if (!data.usuarios || data.usuarios.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-gray-500 italic">No hay usuarios registrados.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-gray-500 italic">No hay usuarios registrados.</td></tr>';
             return;
         }
         
@@ -1007,6 +1007,12 @@ async function cargarUsuariosAdmin() {
                 ubicacion = u.region_nombre || "-";
             }
             
+            // Si el usuario listado es el propio administrador logueado, ocultar/desactivar botón de eliminar
+            const esMismoUser = (emailStr === USER_PROFILE.email);
+            const btnEliminar = esMismoUser 
+                ? `<span class="text-gray-500 italic text-[10px]">Actual</span>`
+                : `<button onclick="eliminarUsuario(${u.id}, '${emailStr}')" class="bg-red-700 hover:bg-red-600 text-white px-2 py-1 rounded text-[10px] font-bold transition-colors">Eliminar</button>`;
+            
             tbody.innerHTML += `
                 <tr class="hover:bg-gray-800 transition-colors">
                     <td class="p-3 font-semibold text-gray-200">${nombreStr}</td>
@@ -1016,11 +1022,36 @@ async function cargarUsuariosAdmin() {
                         <span class="bg-indigo-900/50 text-indigo-400 border border-indigo-500/30 px-2 py-0.5 rounded text-[10px] font-bold">${rolStr}</span>
                     </td>
                     <td class="p-3 text-center text-gray-400">${ubicacion}</td>
+                    <td class="p-3 text-center">${btnEliminar}</td>
                 </tr>
             `;
         });
     } catch (error) {
-        tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-red-500">Error al cargar usuarios: ${error.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-500">Error al cargar usuarios: ${error.message}</td></tr>`;
+    }
+}
+
+async function eliminarUsuario(usuarioId, email) {
+    if (email === USER_PROFILE.email) {
+        alert("No puedes eliminar tu propio usuario administrador.");
+        return;
+    }
+    if (!confirm(`¿Está seguro de que desea eliminar permanentemente al usuario "${email}"? Esta acción no se puede deshacer.`)) {
+        return;
+    }
+    try {
+        const response = await fetch(`/admin/usuarios/${usuarioId}?token=${SESSION_TOKEN}`, {
+            method: "DELETE"
+        });
+        const data = await response.json();
+        if (response.ok) {
+            alert("Usuario eliminado exitosamente.");
+            cargarUsuariosAdmin();
+        } else {
+            alert("Error: " + (data.detail || data.error || "No se pudo eliminar el usuario."));
+        }
+    } catch (e) {
+        alert("Error de red o del servidor al eliminar el usuario.");
     }
 }
 

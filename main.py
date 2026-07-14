@@ -360,6 +360,31 @@ def obtener_usuarios(token: str = Query(...)):
         
     return {"usuarios": usuarios_res}
 
+@app.delete("/admin/usuarios/{usuario_id}")
+def eliminar_usuario(usuario_id: int, token: str = Query(...)):
+    profile = resolver_usuario_por_token(token)
+    # 🔒 EXCLUSIVO ROL 4: Solo el Súper Admin (Rol 4)
+    if profile["rol"] != 4:
+        raise HTTPException(status_code=403, detail="No tienes permisos de Súper Administrador")
+        
+    # Evitar que el admin se borre a sí mismo
+    if usuario_id == profile["id"]:
+        raise HTTPException(status_code=400, detail="No puedes eliminar tu propio usuario administrador")
+        
+    try:
+        usuario = supabase.table("usuarios").select("email").eq("id", usuario_id).single().execute().data
+    except Exception:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        
+    if not usuario:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        
+    # Eliminar usuario
+    supabase.table("usuarios").delete().eq("id", usuario_id).execute()
+    
+    registrar_auditoria(profile["id"], profile["email"], "usuarios", "ELIMINAR", f"Eliminó el usuario: {usuario['email']}")
+    return {"status": "Usuario eliminado exitosamente"}
+
 @app.post("/admin/partidas")
 def crear_partida(partida: PartidaCreate, token: str = Query(...)):
     profile = resolver_usuario_por_token(token)
