@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        /* 1. CONFIGURACIÓN DE LA PÁGINA Y EL MARCO DEL FOOTER */
+        @page {
+            size: letter;
+            margin: 1.5cm 1.5cm 2.5cm 1.5cm;
+            
+            /* Esto le dice a la librería que cree un espacio fijo abajo en todas las hojas */
+            @frame footer {
+                -pdf-frame-content: footer_content; /* Vincula este marco con el div id="footer_content" */
+                bottom: 1cm;
+                margin-left: 1.5cm;
+                margin-right: 1.5cm;
+                height: 1cm;
+            }
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            color: #333333;
+            margin: 0;
+            padding: 0;
+        }
+
+        .header-table {
+            width: 100%;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #10b981;
+            padding-bottom: 8px;
+        }
+
+        /* Forzar saltos de página por bloque de categoría */
+        .category-block {
+            page-break-before: always;
+        }
+        .first-category {
+            page-break-before: avoid;
+        }
+
+        .category-title {
+            font-size: 11pt;
+            font-weight: bold;
+            color: #047857;
+            background-color: #f0fdf4;
+            padding: 6px;
+            margin-bottom: 8px;
+            border-left: 4px solid #10b981;
+        }
+
+        /* Distribución de la matriz de precios con ancho fijo */
+        .content-table {
+            width: 100%;
+            table-layout: fixed;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+        }
+
+        .content-table th {
+            background-color: #1f2937;
+            color: #ffffff;
+            font-size: 8.5pt;
+            font-weight: bold;
+            padding: 6px;
+            text-transform: uppercase;
+        }
+
+        .content-table td {
+            font-size: 8pt;
+            padding: 5.5px 6px;
+            border-bottom: 0.5px solid #e5e7eb;
+        }
+
+        .content-table tr {
+            page-break-inside: avoid;
+        }
+
+        /* Estilo para el ID del footer (ya no usamos position fixed) */
+        #footer_content {
+            text-align: center;
+            font-size: 8pt;
+            color: #4b5563;
+            padding-top: 6px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .final-note {
+            margin-top: 16px;
+            padding: 10px;
+            border: 1px solid #d1d5db;
+            background-color: #f8fafc;
+            color: #1f2937;
+            font-size: 8.5pt;
+            line-height: 1.4;
+            border-radius: 6px;
+        }
+
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+    </style>
+</head>
+<body>
+
+    <div id="footer_content">
+        Página <pdf:pagenumber/> de <pdf:pagecount/>
+    </div>
+
+    {% for bloque in datos %}
+        {% set categoria_tiene_precios = namespace(mostrar=false) %}
+        
+        {# Lógica de verificación para mostrar la categoría #}
+        {% for item in bloque.partidas %}
+            {% if comparar %}
+                {% if (mostrar_np and (item.precio_a_np > 0 or item.precio_b_np > 0)) or 
+                      (mostrar_om1 and (item.precio_a_om1 > 0 or item.precio_b_om1 > 0)) or 
+                      (mostrar_om2 and (item.precio_a_om2 > 0 or item.precio_b_om2 > 0)) %}
+                    {% set categoria_tiene_precios.mostrar = true %}
+                {% endif %}
+            {% else %}
+                {% if (mostrar_np and item.precio_a_np > 0) or 
+                      (mostrar_om1 and item.precio_a_om1 > 0) or 
+                      (mostrar_om2 and item.precio_a_om2 > 0) %}
+                    {% set categoria_tiene_precios.mostrar = true %}
+                {% endif %}
+            {% endif %}
+        {% endfor %}
+
+        {% if categoria_tiene_precios.mostrar %}
+        <div class="category-block {% if loop.first %}first-category{% endif %}">
+            
+            <table class="header-table">
+                <tr>
+                    <td width="50%" valign="top">
+                        <img src="{% if logo_base64 %}data:image/png;base64,{{ logo_base64 }}{% else %}/static/logo.png{% endif %}" width="120" style="margin-right: 30px;"><br>
+                        <div style="font-size: 9pt; color: #4b5563; line-height: 1.4; margin-top: 6px;">
+                            <strong>Documento:</strong> TP - {{ tipos_precios|join(', ') }}<br>
+                            <strong>Versión:</strong> REV-{{ revision }}<br>
+                            <strong>Emitido:</strong> {{ fecha }}
+                        </div>
+                    </td>
+                    <td width="50%" align="right" valign="top" style="padding-top: 75px;">
+                        <div style="font-size: 10pt; font-weight: bold; color: #111827; margin: 0; padding: 0;">CORPORACIÓN FIBEX TELECOM, C.A</div>
+                        <div style="font-size: 9pt; color: #4b5563; margin: 0; padding: 0;">J-30818251-6</div>
+                        <div style="font-size: 9pt; color: #047857; font-weight: bold; margin: 0; padding: 0;">DIRECCIÓN DE NUEVOS PROYECTOS</div>
+                    </td>
+                </tr>
+            </table>
+
+            <div class="category-title">{{ bloque.categoria }}</div>
+            
+            <table class="content-table">
+                <thead>
+                    <tr>
+                        <th style="width: auto;">Descripción de Partidas</th>
+                        <th width="8%" class="text-center">Ud.</th>
+                        
+                        {% if mostrar_np %}
+                            <th width="12%" class="text-right">{{ col_a_nombre }} - NP ({{ moneda_a }})</th>
+                            {% if comparar %}
+                                <th width="12%" class="text-right">{{ col_b_nombre }} - NP ({{ moneda_b }})</th>
+                            {% endif %}
+                        {% endif %}
+                        
+                        {% if mostrar_om1 %}
+                            <th width="12%" class="text-right">O&M Precio 1 ({{ moneda_a }})</th>
+                        {% endif %}
+                        
+                        {% if mostrar_om2 %}
+                            <th width="12%" class="text-right">O&M Precio 2 ({{ moneda_a }})</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                
+                {# Evitar duplicados con una lista de descripciones procesadas #}
+                {% set procesados = [] %}
+                
+                {% for item in bloque.partidas %}
+                    {% if item.descripcion not in procesados %}
+                        {% set _ = procesados.append(item.descripcion) %}
+                        {% set tiene_precio = namespace(ok=false) %}
+                        
+                        {# Lógica de verificación para imprimir la fila #}
+                        {% if comparar %}
+                            {% if (mostrar_np and (item.precio_a_np > 0 or item.precio_b_np > 0)) or 
+                                  (mostrar_om1 and (item.precio_a_om1 > 0 or item.precio_b_om1 > 0)) or 
+                                  (mostrar_om2 and (item.precio_a_om2 > 0 or item.precio_b_om2 > 0)) %}
+                                {% set tiene_precio.ok = true %}
+                            {% endif %}
+                        {% else %}
+                            {% if (mostrar_np and item.precio_a_np > 0) or 
+                                  (mostrar_om1 and item.precio_a_om1 > 0) or 
+                                  (mostrar_om2 and item.precio_a_om2 > 0) %}
+                                {% set tiene_precio.ok = true %}
+                            {% endif %}
+                        {% endif %}
+
+                        {% if tiene_precio.ok %}
+                              <tr>
+                                    <td>{{ item.descripcion }}</td>
+                                    <td class="text-center">{{ item.unidad }}</td>
+                                    
+                                    {% if mostrar_np %}
+                                        <td class="text-right">{{ "%.2f"|format(item.precio_a_np) }}</td>
+                                        {% if comparar %}
+                                            <td class="text-right">{{ "%.2f"|format(item.precio_b_np) }}</td>
+                                        {% endif %}
+                                    {% endif %}
+                                    
+                                    {% if mostrar_om1 %}
+                                        <td class="text-right">{{ "%.2f"|format(item.precio_a_om1) }}</td>
+                                    {% endif %}
+                                    
+                                    {% if mostrar_om2 %}
+                                        <td class="text-right">{{ "%.2f"|format(item.precio_a_om2) }}</td>
+                                    {% endif %}
+                                </tr>
+                        {% endif %}
+                    {% endif %}
+                {% endfor %}
+                </tbody>
+            </table>
+            <p style="font-size: 8.5pt; color: #1f2937; margin: 8px 0 0 0; line-height: 1.4;">
+                Nota importante:<br>
+                ● Cualquier acuerdo de pago extraordinario puntual o sistemático que contradiga el presente documento, debe ser aprobado por dirección.<br>
+                ● Documento sujeto a revisiones sin previo aviso.
+            </p>
+        </div>
+        {% endif %}
+    {% endfor %}
+
+</body>
+</html>

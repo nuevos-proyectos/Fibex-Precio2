@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Core - Fibex Telecom</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Estilos personalizados (opcional) -->
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen">
+    <header class="bg-gray-800 border-b border-gray-700 px-6 py-4 flex justify-between items-center">
+        <div class="flex items-center space-x-4">
+            <img src="/static/logo.png" alt="Logo Fibex" class="h-9 w-auto object-contain">
+            <h1 class="text-xl font-bold text-emerald-400 font-mono tracking-tight">FIBEX TELECOM TABULADOR MANAGER</h1>
+        </div>
+
+        <div id="userInfo" class="hidden text-sm text-gray-300">
+            <span id="txtUserEmail" class="font-semibold"></span> 
+            <span id="badgeRol" class="ml-2 bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded text-xs border border-emerald-500/30"></span>
+            <button onclick="mostrarModalCambiarClave()" class="ml-4 text-amber-400 hover:underline text-xs">Cambiar Clave</button>
+            <button onclick="logout()" class="ml-4 text-red-400 hover:underline text-xs">Salir</button>
+        </div>
+    </header>
+
+    <div id="sectionLogin" class="max-w-md mx-auto mt-20 bg-gray-800 border border-gray-700 rounded-xl p-8 shadow-2xl">
+        <h2 class="text-2xl font-bold mb-6 text-center text-gray-100">Acceso Institucional</h2>
+        <div class="space-y-4">
+            <input type="email" id="loginEmail" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-white" value="" placeholder="Correo">
+            <input type="password" id="loginPass" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-white" value="" placeholder="Clave">
+            <button onclick="ejecutarLogin()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded">Entrar</button>
+        </div>
+    </div>
+
+    <main id="sectionDashboard" class="hidden p-6 max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="bg-gray-800 border border-gray-700 rounded-xl p-5 h-fit space-y-6 overflow-y-auto max-h-[85vh]">
+            <h3 class="text-lg font-bold border-b border-gray-700 pb-2 text-emerald-400">Filtros (País y Ciudad)</h3>
+            
+            <div id="wrapperFiltros" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 mb-1">Columna Principal (Precios A)</label>
+                    <select id="selColumnaA" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-white"></select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 mb-1">Columna Comparativa (Precios B)</label>
+                    <select id="selColumnaB" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-white">
+                        <option value="none">-- Ninguno (Ver solo un precio) --</option>
+                    </select>
+                </div>
+                <div id="divSelRevision">
+                    <label class="block text-xs font-bold text-gray-400 mb-1">Versión (Revisión)</label>
+                    <select id="selRevision" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-white"></select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 mb-1">Precios a mostrar</label>
+                    <div class="grid gap-2">
+                        <label class="inline-flex items-center space-x-2 text-sm text-gray-200">
+                            <input id="chkPrecioNP" type="checkbox" checked class="h-4 w-4 rounded border-gray-600 bg-gray-900 text-emerald-500 focus:ring-emerald-500">
+                            <span>NP - Nuevos Proyectos</span>
+                        </label>
+                        <label id="lblPrecioOM1" class="inline-flex items-center space-x-2 text-sm text-gray-200">
+                            <input id="chkPrecioOM1" type="checkbox" class="h-4 w-4 rounded border-gray-600 bg-gray-900 text-emerald-500 focus:ring-emerald-500">
+                            <span>O&M Precio 1 (menor de 1 km o 5 Ud.)</span>
+                        </label>
+                        <label id="lblPrecioOM2" class="inline-flex items-center space-x-2 text-sm text-gray-200">
+                            <input id="chkPrecioOM2" type="checkbox" class="h-4 w-4 rounded border-gray-600 bg-gray-900 text-emerald-500 focus:ring-emerald-500">
+                            <span>O&M Precio 2 (menor de 2 km o 10 Ud.)</span>
+                        </label>
+                    </div>
+                </div>
+                <button onclick="solicitarVistaPreviaPdf()" class="w-full bg-emerald-600 hover:bg-emerald-500 font-bold py-2 rounded">Ver Vista Previa del PDF</button>
+            </div>
+
+            <div id="panelAdmin" class="hidden border-t border-gray-700 pt-6 space-y-4">
+                <h3 class="text-md font-bold text-amber-400 uppercase">Módulos Nivel 3 (Admin)</h3>
+                
+                <div id="divAltaUsuarios" class="bg-gray-900/50 p-3 rounded border border-gray-700 space-y-2">
+                    <h4 class="text-xs font-bold text-gray-300">ALTA DE USUARIOS</h4>
+                    <input type="email" id="admUserEmail" placeholder="Correo corporativo" class="w-full bg-gray-900 border border-gray-700 rounded p-1 text-xs text-white">
+                    <input type="password" id="admUserPass" placeholder="Contraseña asignada" class="w-full bg-gray-900 border border-gray-700 rounded p-1 text-xs text-white">
+                    
+                    <!-- 🟢 NUEVO SELECT DE ROLES CON LOS VALORES ACTUALIZADOS -->
+                    <select id="admUserRol" onchange="toggleUserRegion()" class="w-full bg-gray-900 border border-gray-700 rounded p-1 text-xs text-white">
+                        <option value="1">Nivel 1: Visualizador Regional</option>
+                        <option value="2">Nivel 2: Visualizador General</option>
+                        <option value="3">Nivel 3: Gerente de Nuevos Proyectos (Nac/Reg)</option>
+                        <option value="5">Nivel 3: Gerente de O&M (Operación y Mantenimiento)</option>
+                        <option value="4">Nivel 4: Súper Administrador</option>
+                    </select>
+                    
+                    <select id="admUserRegion" class="w-full bg-gray-900 border border-gray-700 rounded p-1 text-xs text-white">
+                        <option value="">-- Asignar Ciudad (Solo Nivel 1) --</option>
+                    </select>
+                    <button onclick="crearUsuario()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-xs py-1.5 rounded text-white font-bold">Registrar Usuario</button>
+                </div>
+
+                <div class="bg-gray-900/50 p-3 rounded border border-gray-700 space-y-2">
+                    <h4 class="text-xs font-bold text-gray-300">GESTOR DE PARTIDAS</h4>
+                    <select id="admSelPartidaEdit" onchange="cargarDatosPartidaParaEdicion()" class="w-full bg-gray-900 border border-gray-700 rounded p-1 text-xs text-white">
+                        <option value="nueva">-- CREAR NUEVA PARTIDA --</option>
+                    </select>
+                    
+                    <select id="admPartCat" class="w-full bg-gray-900 border border-gray-700 rounded p-1 text-xs text-white">
+                        <option value="1">Instalaciones de Planta Externa</option>
+                        <option value="2">Instalaciones de Planta Interna</option>
+                        <option value="3">Empalme</option>
+                    </select>
+                    <input type="text" id="admPartDesc" placeholder="Descripción de la partida" class="w-full bg-gray-900 border border-gray-700 rounded p-1 text-xs text-white">
+                    <input type="text" id="admPartUd" placeholder="Unidad (Ej: ML, Ud.)" class="w-full bg-gray-900 border border-gray-700 rounded p-1 text-xs text-white">
+                    <button onclick="guardarPartida()" id="btnGuardarPartida" class="w-full bg-amber-600 hover:bg-amber-500 text-xs font-bold py-1.5 rounded text-white">Crear Nueva Partida</button>
+                    <button onclick="borrarPartida()" id="btnBorrarPartida" class="w-full bg-red-700 hover:bg-red-600 text-xs font-bold py-1.5 rounded text-white hidden">Eliminar Partida</button>
+                </div>
+
+                <div class="bg-gray-900/50 p-3 rounded border border-gray-700 space-y-2">
+                    <h4 class="text-xs font-bold text-gray-300 uppercase">Versionado Inmutable</h4>
+                    <input type="text" id="admNewRevCod" readonly placeholder="Versión siguiente (automática)" class="w-full bg-gray-900 border border-gray-700 rounded p-1 text-xs text-gray-300 bg-opacity-80">
+                    <div class="text-[10px] text-gray-400">La versión se calcula automáticamente a partir de la revisión más reciente. No se puede cambiar manualmente.</div>
+                    <button onclick="crearNuevoBorrador()" class="w-full bg-amber-600 text-xs py-1.5 rounded text-white">1. Crear Borrador</button>
+                    <button onclick="publicarBorradorActual()" class="w-full bg-blue-600 text-xs py-1.5 rounded text-white">2. Congelar y Publicar</button>
+                    <button onclick="cancelarBorradorActual()" class="w-full bg-red-600 text-xs py-1.5 rounded text-white">3. Cancelar Borrador</button>
+                </div>
+
+                <div class="bg-gray-900/50 p-3 rounded border border-gray-700 space-y-2">
+                    <h4 class="text-xs font-bold text-gray-300">CREAR PAÍS O CIUDAD</h4>
+                    <input type="text" id="admNewPais" placeholder="Nuevo País (Ej: Colombia)" class="w-full bg-gray-900 border border-gray-700 rounded p-1 text-xs text-white">
+                    <button onclick="crearPais()" class="w-full bg-indigo-600 text-xs py-1 rounded text-white">Añadir País</button>
+                    <hr class="border-gray-700">
+                    <select id="admSelPaisCiudad" class="w-full bg-gray-900 border border-gray-700 rounded p-1 text-xs text-white"></select>
+                    <input type="text" id="admNewCiudad" placeholder="Nueva Ciudad (Ej: Bogotá)" class="w-full bg-gray-900 border border-gray-700 rounded p-1 text-xs text-white">
+                    <button onclick="crearCiudad()" class="w-full bg-indigo-600 text-xs py-1 rounded text-white">Añadir Ciudad</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="lg:col-span-2 space-y-6">
+            <div class="flex space-x-2 bg-gray-800 p-1.5 rounded-lg border border-gray-700">
+                <button onclick="cambiarTab('vista')" id="tabBtnVista" class="flex-1 py-2 text-sm font-bold rounded bg-gray-700 text-emerald-400">PDF</button>
+                <button onclick="cambiarTab('edicion')" id="tabBtnEdicion" class="hidden flex-1 py-2 text-sm font-bold rounded hover:bg-gray-700 text-amber-400">EDITAR PRECIOS SIMULTÁNEOS</button>
+                <button onclick="cambiarTab('auditoria')" id="tabBtnAuditoria" class="hidden flex-1 py-2 text-sm font-bold rounded hover:bg-gray-700 text-blue-400">AUDITORÍA</button>
+            </div>
+
+            <div id="tabContenidoVista" class="bg-gray-800 border border-gray-700 rounded-xl p-2 h-[80vh]">
+                <iframe id="pdfFrame" class="w-full h-full rounded border border-gray-900 bg-white" src="about:blank"></iframe>
+            </div>
+
+            <div id="tabContenidoEdicion" class="hidden bg-gray-800 border border-gray-700 rounded-xl p-5 space-y-4">
+                <div class="flex justify-between items-center border-b border-gray-700 pb-2">
+                    <h3 class="text-md font-bold text-amber-400" id="tituloEdicion">Modificando: -</h3>
+                    <button onclick="cargarMatrizPreciosAdmin()" class="bg-gray-700 px-3 py-1 rounded text-xs">Sincronizar</button>
+                </div>
+                <div class="overflow-y-auto max-h-[65vh] border border-gray-700 rounded">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-gray-900 sticky top-0 text-gray-400 uppercase">
+                            <tr>
+                                <th class="p-3">Partida</th>
+                                <th class="p-3 text-center w-24">Precio Nacional</th>
+                                <th class="p-3 text-center w-24">Precio Región</th>
+                                <th class="p-3 text-center">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyMatriz" class="divide-y divide-gray-700 bg-gray-900/30"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="tabContenidoAuditoria" class="hidden bg-gray-800 border border-gray-700 rounded-xl p-5 space-y-4">
+                <div class="flex justify-between items-center border-b border-gray-700 pb-2">
+                    <h3 class="text-md font-bold text-blue-400">Historial de Cambios</h3>
+                    <div class="flex items-center space-x-2">
+                        <label class="text-xs text-gray-400 font-bold">Seleccionar Día:</label>
+                        <select id="selFechaAuditoria" onchange="cargarAuditoriaPorFecha()" class="bg-gray-900 border border-gray-700 rounded p-1 text-xs text-white">
+                            <option value="">Cargando fechas...</option>
+                        </select>
+                        <button onclick="cargarFechasAuditoria()" class="bg-gray-700 hover:bg-gray-600 p-1 rounded">🔄</button>
+                    </div>
+                </div>
+                <div class="overflow-y-auto max-h-[65vh] border border-gray-700 rounded">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-gray-900 sticky top-0 text-gray-400 uppercase">
+                            <tr>
+                                <th class="p-3 w-16 text-center">Hora</th>
+                                <th class="p-3 w-40">Usuario</th>
+                                <th class="p-3 w-24">Módulo</th>
+                                <th class="p-3 w-24 text-center">Acción</th>
+                                <th class="p-3">Descripción del Cambio</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyAuditoria" class="divide-y divide-gray-700 bg-gray-900/30">
+                            <tr><td colspan="5" class="p-4 text-center text-gray-500 italic">Seleccione una fecha para ver la actividad.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal Cambiar Clave -->
+    <div id="modalCambiarClave" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+        <div class="bg-gray-800 border border-gray-700 rounded-xl p-6 w-full max-w-md shadow-2xl relative">
+            <h3 class="text-lg font-bold text-amber-400 mb-4 font-mono uppercase tracking-wider">Cambiar Contraseña</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 mb-1">Contraseña Actual</label>
+                    <input type="password" id="inputClaveActual" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-white text-sm focus:outline-none focus:border-amber-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 mb-1">Nueva Contraseña</label>
+                    <input type="password" id="inputClaveNueva" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-white text-sm focus:outline-none focus:border-amber-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 mb-1">Confirmar Nueva Contraseña</label>
+                    <input type="password" id="inputClaveNuevaConf" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-white text-sm focus:outline-none focus:border-amber-500">
+                </div>
+                <div class="flex space-x-2 pt-2">
+                    <button onclick="ejecutarCambioClave()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded text-sm transition-colors">Guardar</button>
+                    <button onclick="cerrarModalCambiarClave()" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 rounded text-sm transition-colors">Cancelar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/script.js?v=5"></script>
+</body>
+</html>
