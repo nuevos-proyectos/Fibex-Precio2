@@ -38,6 +38,8 @@ class UsuarioCreate(BaseModel):
     rol: int
     pais_asignado_id: Optional[int] = None
     region_asignada_id: Optional[int] = None
+    nombre: Optional[str] = None
+    apellido: Optional[str] = None
 
 class PartidaCreate(BaseModel):
     id: Optional[int] = None
@@ -336,6 +338,27 @@ def crear_usuario_global(user: UsuarioCreate, token: str = Query(...)):
     
     registrar_auditoria(profile["id"], profile["email"], "usuarios", "CREAR", f"Creó un nuevo usuario: {user.email}")
     return {"status": "Usuario creado exitosamente"}
+
+@app.get("/admin/usuarios")
+def obtener_usuarios(token: str = Query(...)):
+    profile = resolver_usuario_por_token(token)
+    # 🔒 EXCLUSIVO ROL 4: Solo el Súper Admin (Rol 4)
+    if profile["rol"] != 4:
+        raise HTTPException(status_code=403, detail="No tienes permisos de Súper Administrador")
+        
+    usuarios_res = supabase.table("usuarios").select("*").order("email").execute().data or []
+    regiones = supabase.table("regiones").select("id, nombre").execute().data or []
+    paises = supabase.table("paises").select("id, nombre").execute().data or []
+    
+    region_map = {r["id"]: r["nombre"] for r in regiones}
+    pais_map = {p["id"]: p["nombre"] for p in paises}
+    
+    for u in usuarios_res:
+        u.pop("password", None)  # Eliminar clave por seguridad
+        u["region_nombre"] = region_map.get(u.get("region_asignada_id"), "-")
+        u["pais_nombre"] = pais_map.get(u.get("pais_asignado_id"), "-")
+        
+    return {"usuarios": usuarios_res}
 
 @app.post("/admin/partidas")
 def crear_partida(partida: PartidaCreate, token: str = Query(...)):

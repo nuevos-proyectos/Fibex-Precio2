@@ -217,6 +217,7 @@ function aplicarPermisosPorRol() {
     const rol = parseInt(perfil.rol);
     const tabEdicion = document.getElementById("tabBtnEdicion");
     const tabAuditoria = document.getElementById("tabBtnAuditoria");
+    const tabUsuarios = document.getElementById("tabBtnUsuarios");
     const panelAdmin = document.getElementById("panelAdmin");
     const divAltaUsuarios = document.getElementById("divAltaUsuarios");
     const selectorColA = document.getElementById("selColumnaA");
@@ -226,6 +227,7 @@ function aplicarPermisosPorRol() {
     // Ocultar elementos por defecto (solo se mostrarán si el rol lo permite)
     if (tabEdicion) tabEdicion.classList.add("hidden");
     if (tabAuditoria) tabAuditoria.classList.add("hidden");
+    if (tabUsuarios) tabUsuarios.classList.add("hidden");
     if (panelAdmin) panelAdmin.classList.add("hidden");
     if (divAltaUsuarios) divAltaUsuarios.classList.add("hidden");
     const btnBorrar = document.getElementById("btnBorrarPartida");
@@ -275,6 +277,7 @@ function aplicarPermisosPorRol() {
         // Súper Administrador: acceso total
         if (tabEdicion) tabEdicion.classList.remove("hidden");
         if (tabAuditoria) tabAuditoria.classList.remove("hidden");
+        if (tabUsuarios) tabUsuarios.classList.remove("hidden");
         if (panelAdmin) panelAdmin.classList.remove("hidden");
         if (divAltaUsuarios) divAltaUsuarios.classList.remove("hidden");
         if (selectorColA) selectorColA.disabled = false;
@@ -298,7 +301,7 @@ function calcularProximaVersion(revisiones) {
 }
 
 function cambiarTab(tab) {
-    const vistas = ["Vista", "Edicion", "Auditoria"];
+    const vistas = ["Vista", "Edicion", "Auditoria", "Usuarios"];
     vistas.forEach(v => {
         document.getElementById(`tabContenido${v}`).classList.add("hidden");
         document.getElementById(`tabBtn${v}`).classList.remove("bg-gray-700");
@@ -315,6 +318,10 @@ function cambiarTab(tab) {
         document.getElementById("tabContenidoAuditoria").classList.remove("hidden");
         document.getElementById("tabBtnAuditoria").classList.add("bg-gray-700");
         cargarFechasAuditoria();
+    } else if (tab === 'usuarios') {
+        document.getElementById("tabContenidoUsuarios").classList.remove("hidden");
+        document.getElementById("tabBtnUsuarios").classList.add("bg-gray-700");
+        cargarUsuariosAdmin();
     }
 }
 
@@ -539,7 +546,9 @@ async function crearUsuario() {
         email: document.getElementById("admUserEmail").value,
         password: document.getElementById("admUserPass").value,
         rol: rol,
-        region_asignada_id: rol === 1 ? parseInt(region) : null
+        region_asignada_id: rol === 1 ? parseInt(region) : null,
+        nombre: document.getElementById("admUserNombre").value || null,
+        apellido: document.getElementById("admUserApellido").value || null
     };
 
     const r = await fetch(`/admin/usuarios?token=${SESSION_TOKEN}`, {
@@ -552,6 +561,13 @@ async function crearUsuario() {
     alert(d.status || d.detail);
     document.getElementById("admUserEmail").value = "";
     document.getElementById("admUserPass").value = "";
+    document.getElementById("admUserNombre").value = "";
+    document.getElementById("admUserApellido").value = "";
+    
+    // Si la pestaña de usuarios está abierta, sincronizar la lista
+    if (!document.getElementById("tabContenidoUsuarios").classList.contains("hidden")) {
+        cargarUsuariosAdmin();
+    }
 }
 
 function cargarDatosPartidaParaEdicion() {
@@ -614,20 +630,60 @@ async function guardarPartida() {
 }
 
 async function crearPais() {
+    const nombrePais = document.getElementById("admNewPais").value.trim();
+    if (!nombrePais) {
+        alert("Debes ingresar el nombre del país.");
+        return;
+    }
+    
     const f = new FormData(); 
-    f.append("nombre", document.getElementById("admNewPais").value);
-    await fetch(`/admin/paises?token=${SESSION_TOKEN}`, { method: "POST", body: f });
-    alert("País Creado"); 
-    precargarAuxiliares();
+    f.append("nombre", nombrePais);
+    
+    try {
+        const r = await fetch(`/admin/paises?token=${SESSION_TOKEN}`, { method: "POST", body: f });
+        const d = await r.json();
+        if (r.ok) {
+            alert("País Creado con éxito.");
+            document.getElementById("admNewPais").value = "";
+            precargarAuxiliares();
+        } else {
+            alert("Error al crear país: " + (d.detail || d.error || "Error del servidor"));
+        }
+    } catch (e) {
+        alert("Error de red al crear el país.");
+    }
 }
 
 async function crearCiudad() {
+    const paisId = document.getElementById("admSelPaisCiudad").value;
+    const nombreCiudad = document.getElementById("admNewCiudad").value.trim();
+    
+    if (!paisId) {
+        alert("Debes seleccionar un país de destino.");
+        return;
+    }
+    if (!nombreCiudad) {
+        alert("Debes ingresar el nombre de la ciudad.");
+        return;
+    }
+    
     const f = new FormData(); 
-    f.append("pais_id", document.getElementById("admSelPaisCiudad").value);
-    f.append("nombre", document.getElementById("admNewCiudad").value);
-    await fetch(`/admin/regiones?token=${SESSION_TOKEN}`, { method: "POST", body: f });
-    alert("Ciudad Creada"); 
-    precargarAuxiliares();
+    f.append("pais_id", paisId);
+    f.append("nombre", nombreCiudad);
+    
+    try {
+        const r = await fetch(`/admin/regiones?token=${SESSION_TOKEN}`, { method: "POST", body: f });
+        const d = await r.json();
+        if (r.ok) {
+            alert("Ciudad Creada con éxito.");
+            document.getElementById("admNewCiudad").value = "";
+            precargarAuxiliares();
+        } else {
+            alert("Error al crear ciudad: " + (d.detail || d.error || "Error del servidor"));
+        }
+    } catch (e) {
+        alert("Error de red al crear la ciudad.");
+    }
 }
 
 async function crearNuevoBorrador() {
@@ -912,3 +968,66 @@ async function borrarPartida() {
         alert("Error de red o del servidor.");
     }
 }
+
+async function cargarUsuariosAdmin() {
+    const tbody = document.getElementById("tbodyUsuarios");
+    if (!tbody) return;
+    
+    tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-amber-500">Cargando usuarios...</td></tr>';
+    
+    try {
+        const resp = await fetch(`/admin/usuarios?token=${SESSION_TOKEN}`);
+        if (!resp.ok) throw new Error(await resp.text());
+        
+        const data = await resp.json();
+        
+        tbody.innerHTML = "";
+        if (!data.usuarios || data.usuarios.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-gray-500 italic">No hay usuarios registrados.</td></tr>';
+            return;
+        }
+        
+        const rolesNombres = {
+            1: "Nivel 1: Visualizador Regional",
+            2: "Nivel 2: Visualizador General",
+            3: "Nivel 3: Gerente de Nuevos Proyectos",
+            4: "Nivel 4: Súper Administrador",
+            5: "Nivel 5: Gerente de O&M"
+        };
+        
+        data.usuarios.forEach(u => {
+            const nombreStr = u.nombre || "-";
+            const apellidoStr = u.apellido || "-";
+            const emailStr = u.email || "-";
+            const rolStr = rolesNombres[u.rol] || `Rol ${u.rol}`;
+            
+            // Ubicación asignada
+            let ubicacion = "-";
+            if (u.rol === 1) {
+                ubicacion = u.region_nombre || "-";
+            }
+            
+            tbody.innerHTML += `
+                <tr class="hover:bg-gray-800 transition-colors">
+                    <td class="p-3 font-semibold text-gray-200">${nombreStr}</td>
+                    <td class="p-3 font-semibold text-gray-200">${apellidoStr}</td>
+                    <td class="p-3 text-gray-300 font-mono">${emailStr}</td>
+                    <td class="p-3 text-center">
+                        <span class="bg-indigo-900/50 text-indigo-400 border border-indigo-500/30 px-2 py-0.5 rounded text-[10px] font-bold">${rolStr}</span>
+                    </td>
+                    <td class="p-3 text-center text-gray-400">${ubicacion}</td>
+                </tr>
+            `;
+        });
+    } catch (error) {
+        tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-red-500">Error al cargar usuarios: ${error.message}</td></tr>`;
+    }
+}
+
+// Agregar listeners para el inicio de sesión con Enter
+document.getElementById("loginEmail")?.addEventListener("keydown", function(e) {
+    if (e.key === "Enter") ejecutarLogin();
+});
+document.getElementById("loginPass")?.addEventListener("keydown", function(e) {
+    if (e.key === "Enter") ejecutarLogin();
+});

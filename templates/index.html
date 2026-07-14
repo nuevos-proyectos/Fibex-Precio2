@@ -79,6 +79,8 @@
                     <h4 class="text-xs font-bold text-gray-300">ALTA DE USUARIOS</h4>
                     <input type="email" id="admUserEmail" placeholder="Correo corporativo" class="w-full bg-gray-900 border border-gray-700 rounded p-1 text-xs text-white">
                     <input type="password" id="admUserPass" placeholder="Contraseña asignada" class="w-full bg-gray-900 border border-gray-700 rounded p-1 text-xs text-white">
+                    <input type="text" id="admUserNombre" placeholder="Nombre" class="w-full bg-gray-900 border border-gray-700 rounded p-1 text-xs text-white">
+                    <input type="text" id="admUserApellido" placeholder="Apellido" class="w-full bg-gray-900 border border-gray-700 rounded p-1 text-xs text-white">
                     
                     <!-- 🟢 NUEVO SELECT DE ROLES CON LOS VALORES ACTUALIZADOS -->
                     <select id="admUserRol" onchange="toggleUserRegion()" class="w-full bg-gray-900 border border-gray-700 rounded p-1 text-xs text-white">
@@ -138,6 +140,7 @@
                 <button onclick="cambiarTab('vista')" id="tabBtnVista" class="flex-1 py-2 text-sm font-bold rounded bg-gray-700 text-emerald-400">PDF</button>
                 <button onclick="cambiarTab('edicion')" id="tabBtnEdicion" class="hidden flex-1 py-2 text-sm font-bold rounded hover:bg-gray-700 text-amber-400">EDITAR PRECIOS SIMULTÁNEOS</button>
                 <button onclick="cambiarTab('auditoria')" id="tabBtnAuditoria" class="hidden flex-1 py-2 text-sm font-bold rounded hover:bg-gray-700 text-blue-400">AUDITORÍA</button>
+                <button onclick="cambiarTab('usuarios')" id="tabBtnUsuarios" class="hidden flex-1 py-2 text-sm font-bold rounded hover:bg-gray-700 text-indigo-400">USUARIOS</button>
             </div>
 
             <div id="tabContenidoVista" class="bg-gray-800 border border-gray-700 rounded-xl p-2 h-[80vh]">
@@ -192,6 +195,29 @@
                     </table>
                 </div>
             </div>
+
+            <div id="tabContenidoUsuarios" class="hidden bg-gray-800 border border-gray-700 rounded-xl p-5 space-y-4">
+                <div class="flex justify-between items-center border-b border-gray-700 pb-2">
+                    <h3 class="text-md font-bold text-indigo-400 font-mono uppercase tracking-wider">Usuarios Registrados</h3>
+                    <button onclick="cargarUsuariosAdmin()" class="bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded text-xs transition-colors">Sincronizar</button>
+                </div>
+                <div class="overflow-y-auto max-h-[65vh] border border-gray-700 rounded">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-gray-900 sticky top-0 text-gray-400 uppercase">
+                            <tr>
+                                <th class="p-3">Nombre</th>
+                                <th class="p-3">Apellido</th>
+                                <th class="p-3">Correo</th>
+                                <th class="p-3 text-center">Rol</th>
+                                <th class="p-3 text-center">Ubicación Asignada</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyUsuarios" class="divide-y divide-gray-700 bg-gray-900/30">
+                            <tr><td colspan="5" class="p-4 text-center text-gray-500 italic">Cargando usuarios...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </main>
 
@@ -220,6 +246,6 @@
         </div>
     </div>
 
-    <script src="/static/script.js?v=5"></script>
+    <script src="/static/script.js?v=6"></script>
 </body>
 </html>
